@@ -20,6 +20,7 @@ allowed-tools:
 |--------|------|---------|
 | `oscillator.py` | 单摆正弦曲线·时间视角ω（纸带式） | `python scripts/oscillator.py` |
 | `wave_vector_k.py` | 波矢k·空间视角（一排单摆相位分布） | `python scripts/wave_vector_k.py` |
+| `traveling_wave.py` | 行波 sin(ωt-kx) · 时空结合（波传播） | `python scripts/traveling_wave.py` |
 
 ### 调用方法
 
