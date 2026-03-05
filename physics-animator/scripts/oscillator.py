@@ -105,8 +105,8 @@ def render_frame(fig, ax, frame, n_frames, L, A, H, trail_len, axis_label):
     current_swing = A * np.sin(progress)
     ball_z = H - np.sqrt(max(L ** 2 - current_swing ** 2, 0.01))
 
-    # 支架
-    ax.plot([0, 0], [-0.3, 0.3], [H, H], color='#888888', linewidth=4, alpha=0.6)
+    # 支架（横梁沿x方向，与纸带平行）
+    ax.plot([-0.3, 0.3], [0, 0], [H, H], color='#888888', linewidth=4, alpha=0.6)
     ax.plot([0, 0], [0, 0], [H, H + 0.15], color='#888888', linewidth=3, alpha=0.5)
 
     # 摆杆（现在沿着y方向摆动）
