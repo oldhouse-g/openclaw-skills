@@ -137,29 +137,30 @@ def main():
                        alpha=0.15, zorder=4)
 
         # ★ 高亮小球（核心！平滑移动的大红球）
+        # 位置：和正弦曲线上的点完全重合（y坐标就是振幅*sin(kx-ωt)）
         y_highlight = A * np.sin(k * x_highlight - phase)
         z_highlight = H - np.sqrt(max(L ** 2 - y_highlight ** 2, 0.01))
         
-        # 高亮小球
+        # 高亮小球（小一点，和单摆比例协调）
         ax.scatter([x_highlight], [y_highlight], [z_highlight], 
-                   color=CREST_COLOR, s=350, zorder=10,
-                   edgecolors='#AD1457', linewidths=2)
+                   color=CREST_COLOR, s=200, zorder=10,
+                   edgecolors='#AD1457', linewidths=1.5)
         
-        # 高亮小球到底面的投影
+        # 高亮小球到底面的投影（和单摆投影重合）
         ax.plot([x_highlight, x_highlight], [y_highlight, y_highlight], [z_highlight, 0],
-                color=CREST_COLOR, linewidth=1.5, linestyle=':', alpha=0.6, zorder=9)
+                color=CREST_COLOR, linewidth=1.2, linestyle=':', alpha=0.6, zorder=9)
         ax.scatter([x_highlight], [y_highlight], [0], 
-                   color=CREST_COLOR, s=100, zorder=9, marker='^')
+                   color=CREST_COLOR, s=60, zorder=9, marker='^')
 
-        # 波传播方向箭头（跟随高亮点）
+        # 波传播方向箭头（跟随高亮点，紧贴小球）
         if x_highlight < x_span - 0.8:
-            ax.quiver(x_highlight + 0.4, y_highlight + 0.3, 0, 
-                      1.0, 0, 0, color=CREST_COLOR, 
-                      arrow_length_ratio=0.35, linewidth=2.5, zorder=11)
+            ax.quiver(x_highlight + 0.3, y_highlight + 0.2, 0, 
+                      0.8, 0, 0, color=CREST_COLOR, 
+                      arrow_length_ratio=0.35, linewidth=2, zorder=11)
 
-        # 标注
-        ax.text(x_highlight, y_highlight + 0.5, 0, 
-                '高亮点', fontsize=11, color=CREST_COLOR, 
+        # 标注（紧贴小球上方）
+        ax.text(x_highlight, y_highlight + 0.35, 0, 
+                '高亮点', fontsize=10, color=CREST_COLOR, 
                 ha='center', fontweight='bold', zorder=12)
 
         # 公式标注
