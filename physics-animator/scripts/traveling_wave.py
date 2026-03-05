@@ -3,7 +3,7 @@
 行波 sin(ωt - kx) 动图 - 动画3
 演示：行波 = 时间视角(ω) + 空间视角(k) 的结合
 波相位 = k·x - ω·t，随时间传播
-重点：波峰标记跟踪，清晰展示"波在传播"
+重点：高亮小球平滑移动展示传播
 
 用法：
   python traveling_wave.py
@@ -39,7 +39,7 @@ MAIN_EDGE = '#D84315'
 GHOST_COLOR = '#CCCCCC'
 TRACE_COLOR = '#2196F3'
 AXIS_GREEN = '#4CAF50'
-CREST_COLOR = '#E91E63'  # 波峰标记颜色（品红，醒目）
+CREST_COLOR = '#E91E63'  # 高亮小球颜色
 # ==================================
 
 
@@ -61,11 +61,11 @@ def main():
     wl = DEFAULTS['wave_length']
 
     k = 2 * np.pi / wl
-    omega = 2 * np.pi / 3.0  # 3秒一个周期，让传播看得清楚
-    x_span = 3 * wl  # 显示3个波长的范围
+    omega = 2 * np.pi / 3.0
+    x_span = 3 * wl
 
-    # 更多单摆，让波形更清楚
-    x_positions = np.arange(0, x_span + 0.1, wl / 4)  # 四分之一波长一个
+    # 固定单摆（半波长一个，显示空间分布）
+    x_positions = np.arange(0, x_span + 0.1, wl / 2)
     x_curve = np.linspace(0, x_span, 300)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +79,6 @@ def main():
         fig = plt.figure(figsize=DEFAULTS['fig_size'], dpi=DEFAULTS['dpi'])
         ax = fig.add_subplot(111, projection='3d')
 
-        # 坐标面板白色/透明
         ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
@@ -90,9 +89,9 @@ def main():
         t = frame / fps
         phase = omega * t
 
-        # ★ 波峰位置：kx - ωt = π/2 时 sin=1（峰值）
-        # x_crest = (ωt + π/2) / k，对 x_span 取模实现循环
-        x_crest = ((phase + np.pi / 2) / k) % x_span
+        # ★ 高亮点位置：在波峰附近平滑移动
+        # 波峰位置 = (ωt + π/2) / k，取模实现循环
+        x_highlight = ((phase + np.pi / 2) / k) % x_span
 
         # 底面行波曲线
         y_curve = A * np.sin(k * x_curve - phase)
@@ -107,72 +106,73 @@ def main():
         ax.plot([0, x_span], [0, 0], [H, H],
                 color='#888888', linewidth=2.5, alpha=0.4)
 
-        # ★ 波峰位置标记竖线（品红色，从底面到横梁，非常醒目）
-        ax.plot([x_crest, x_crest], [A, A], [0, H * 0.3],
-                color=CREST_COLOR, linewidth=2, alpha=0.6, zorder=7)
-        # 波峰底面三角标记
-        ax.scatter([x_crest], [A], [0], color=CREST_COLOR, s=120,
-                   marker='^', zorder=8)
+        # ★ 画高亮点轨迹（淡色，显示运动路径）
+        # 从起点到当前位置的轨迹
+        trail_start = (x_highlight - 1.5 * wl) % x_span
+        trail_x = np.linspace(trail_start, x_highlight, 50)
+        # 处理跨周期的情况
+        trail_x_adj = []
+        trail_y_adj = []
+        for tx in trail_x:
+            if tx < trail_start:
+                tx += x_span
+            if tx <= x_highlight:
+                trail_x_adj.append(tx % x_span)
+                trail_y_adj.append(A * np.sin(k * tx - phase))
+        if trail_x_adj:
+            ax.plot(trail_x_adj, trail_y_adj, np.zeros_like(trail_x_adj),
+                    color=CREST_COLOR, linewidth=1.5, alpha=0.25, zorder=2)
 
-        # 画每个单摆
+        # ★ 画固定单摆（淡淡的，显示空间分布）
         for i, xp in enumerate(x_positions):
             swing = A * np.sin(k * xp - phase)
             ball_z = H - np.sqrt(max(L ** 2 - swing ** 2, 0.01))
 
-            # 判断是否是波峰附近的单摆（距离波峰最近的那个高亮）
-            dist_to_crest = min(abs(xp - x_crest), x_span - abs(xp - x_crest))
-            is_near_crest = dist_to_crest < wl / 6
-
-            if is_near_crest:
-                rc, rw, ra = '#555555', 2.0, 0.9
-                bc = CREST_COLOR
-                bs, bec, bew, ba = 200, '#C2185B', 1.5, 1.0
-                pa, pds = 0.5, 60
-            else:
-                rc, rw, ra = GHOST_COLOR, 0.8, 0.25
-                bc, bs, bec, bew, ba = GHOST_COLOR, 50, '#BBBBBB', 0.5, 0.3
-                pa, pds = 0.1, 15
-
-            # 摆杆
+            # 摆杆（非常淡）
             ax.plot([xp, xp], [0, swing], [H, ball_z],
-                    color=rc, linewidth=rw, alpha=ra, zorder=4)
-            # 悬挂点
-            ax.scatter([xp], [0], [H], color='#888888', s=10,
-                       marker='s', zorder=5, alpha=ra)
-            # 小球
-            ax.scatter([xp], [swing], [ball_z], color=bc, s=bs,
-                       zorder=6, edgecolors=bec, linewidths=bew, alpha=ba)
-            # 投影虚线
-            ax.plot([xp, xp], [swing, swing], [ball_z, 0],
-                    color=rc, linewidth=0.5, linestyle=':', alpha=pa)
-            # 底面投影点
-            ax.scatter([xp], [swing], [0], color=TRACE_COLOR, s=pds,
-                       zorder=5, alpha=0.6 if is_near_crest else 0.15)
+                    color=GHOST_COLOR, linewidth=0.6, alpha=0.2, zorder=4)
+            ax.scatter([xp], [swing], [ball_z], color=GHOST_COLOR, s=30,
+                       alpha=0.2, zorder=5)
+            ax.scatter([xp], [swing], [0], color=GHOST_COLOR, s=10,
+                       alpha=0.15, zorder=4)
 
-        # ★ 波传播方向大箭头（跟着波峰走）
-        arrow_x = x_crest + 0.3
-        if arrow_x < x_span - 0.5:
-            ax.quiver(arrow_x, A + 0.25, 0, 1.2, 0, 0,
-                      color=CREST_COLOR, arrow_length_ratio=0.35, linewidth=2.5)
+        # ★ 高亮小球（核心！平滑移动的大红球）
+        y_highlight = A * np.sin(k * x_highlight - phase)
+        z_highlight = H - np.sqrt(max(L ** 2 - y_highlight ** 2, 0.01))
+        
+        # 高亮小球
+        ax.scatter([x_highlight], [y_highlight], [z_highlight], 
+                   color=CREST_COLOR, s=350, zorder=10,
+                   edgecolors='#AD1457', linewidths=2)
+        
+        # 高亮小球到底面的投影
+        ax.plot([x_highlight, x_highlight], [y_highlight, y_highlight], [z_highlight, 0],
+                color=CREST_COLOR, linewidth=1.5, linestyle=':', alpha=0.6, zorder=9)
+        ax.scatter([x_highlight], [y_highlight], [0], 
+                   color=CREST_COLOR, s=100, zorder=9, marker='^')
+
+        # 波传播方向箭头（跟随高亮点）
+        if x_highlight < x_span - 0.8:
+            ax.quiver(x_highlight + 0.4, y_highlight + 0.3, 0, 
+                      1.0, 0, 0, color=CREST_COLOR, 
+                      arrow_length_ratio=0.35, linewidth=2.5, zorder=11)
 
         # 标注
-        ax.text(x_crest, A + 0.55, 0, '波峰',
-                fontsize=11, color=CREST_COLOR, ha='center', fontweight='bold')
+        ax.text(x_highlight, y_highlight + 0.5, 0, 
+                '高亮点', fontsize=11, color=CREST_COLOR, 
+                ha='center', fontweight='bold', zorder=12)
 
-        # 公式标注（固定位置）
+        # 公式标注
         ax.text(x_span / 2, -A - 0.6, 0,
                 '行波：sin(kx - ωt)　　k作用在x上，ω作用在t上',
                 fontsize=11, color=TRACE_COLOR, ha='center', fontweight='bold')
         ax.text(x_span / 2, -A - 1.0, 0,
-                '波峰向 +x 方向传播，速度 v = ω/k',
+                '红色高亮点沿正弦轨迹平滑移动，展示波在传播',
                 fontsize=10, color='#888888', ha='center')
 
         # 波长标注
-        x_mark = x_crest
-        x_mark2 = x_mark + wl
-        if x_mark2 <= x_span:
-            ax.text((x_mark + x_mark2) / 2, -A - 0.2, 0, 'λ',
-                    fontsize=12, color='#9C27B0', ha='center', fontweight='bold')
+        ax.text(wl / 2, -A - 0.2, 0, 'λ',
+                fontsize=12, color='#9C27B0', ha='center', fontweight='bold')
 
         # 重力箭头
         ax.quiver(0, -1.0, H, 0, 0, -0.5, color='#BBBBBB',
@@ -192,7 +192,7 @@ def main():
                       fontweight='bold', labelpad=5)
         ax.set_zlabel('↑ 高度', fontsize=10, color='#888888',
                       fontweight='bold', labelpad=5)
-        ax.set_title('行波 sin(kx - ωt)：波峰随时间向右传播',
+        ax.set_title('行波 sin(kx - ωt)：高亮点沿正弦轨迹平滑移动，展示波在传播',
                      fontsize=13, fontweight='bold', pad=12)
 
         buf = io.BytesIO()
