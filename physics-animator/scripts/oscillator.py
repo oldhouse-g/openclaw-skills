@@ -34,7 +34,17 @@ DEFAULTS = {
     'fig_size': (11, 7),
     'dpi': 100,
     'axis_label': '位置',
+    # ★ 标准3D视角（全局统一）
+    'view_elev': 25,
+    'view_azim': -60,
 }
+
+# ★ 标准配色（全局统一）
+MAIN_COLOR = '#FF5722'       # 主角球颜色
+MAIN_EDGE = '#D84315'        # 主角球边框
+GHOST_COLOR = '#CCCCCC'      # 幻影颜色
+TRACE_COLOR = '#2196F3'      # 轨迹曲线颜色
+AXIS_GREEN = '#4CAF50'       # 空间轴标注
 # ==================================
 
 
@@ -54,6 +64,14 @@ def render_frame(fig, ax, frame, n_frames, L, A, H, trail_len, axis_label):
     """渲染单帧"""
     ax.cla()
 
+    # ★ 坐标面板白色/透明（全局统一标准）
+    ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.xaxis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 0.3)
+    ax.yaxis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 0.3)
+    ax.zaxis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 0.3)
+
     progress = (frame / n_frames) * 4 * np.pi
     t = np.linspace(0, progress, max(int(progress * 30), 2))
 
@@ -64,7 +82,7 @@ def render_frame(fig, ax, frame, n_frames, L, A, H, trail_len, axis_label):
     visible = y_screen >= -trail_len
     if np.any(visible):
         ax.plot(swing_vals[visible], y_screen[visible], np.zeros(np.sum(visible)),
-                color='#2196F3', linewidth=2.5, zorder=3)
+                color=TRACE_COLOR, linewidth=2.5, zorder=3)
 
     # 纸带网格线
     for grid_y in np.arange(0, progress + np.pi, np.pi):
@@ -75,37 +93,37 @@ def render_frame(fig, ax, frame, n_frames, L, A, H, trail_len, axis_label):
 
     # 底面中心线
     ax.plot([0, 0], [-trail_len, 0.5], [0, 0],
-            color='#CCCCCC', linewidth=1, linestyle='--', alpha=0.5)
+            color='#E0E0E0', linewidth=1, linestyle='--', alpha=0.5)
 
     # 纸带方向箭头
     ax.quiver(1.2, -trail_len + 1, 0, 0, -1.5, 0,
-              color='#4CAF50', arrow_length_ratio=0.3, linewidth=2)
+              color=AXIS_GREEN, arrow_length_ratio=0.3, linewidth=2)
     ax.text(1.2, -trail_len + 0.3, 0, axis_label, fontsize=10,
-            color='#4CAF50', ha='center', fontweight='bold')
+            color=AXIS_GREEN, ha='center', fontweight='bold')
 
     # 单摆（固定在y=0）
     current_swing = A * np.sin(progress)
     ball_z = H - np.sqrt(max(L ** 2 - current_swing ** 2, 0.01))
 
     # 支架
-    ax.plot([-0.3, 0.3], [0, 0], [H, H], color='#666666', linewidth=4, alpha=0.8)
-    ax.plot([0, 0], [0, 0], [H, H + 0.15], color='#666666', linewidth=3, alpha=0.6)
+    ax.plot([-0.3, 0.3], [0, 0], [H, H], color='#888888', linewidth=4, alpha=0.6)
+    ax.plot([0, 0], [0, 0], [H, H + 0.15], color='#888888', linewidth=3, alpha=0.5)
 
     # 摆杆
     ax.plot([0, current_swing], [0, 0], [H, ball_z],
             color='#555555', linewidth=2.5, zorder=4)
-    ax.scatter([0], [0], [H], color='#333333', s=50, marker='s', zorder=5)
+    ax.scatter([0], [0], [H], color='#888888', s=50, marker='s', zorder=5)
 
-    # 小球
-    ax.scatter([current_swing], [0], [ball_z], color='#FF5722', s=280, zorder=6,
-               edgecolors='#D84315', linewidths=1.5)
+    # 小球（标准配色）
+    ax.scatter([current_swing], [0], [ball_z], color=MAIN_COLOR, s=280, zorder=6,
+               edgecolors=MAIN_EDGE, linewidths=1.5)
 
     # 投影虚线
     ax.plot([current_swing, current_swing], [0, 0], [ball_z, 0],
-            color='#FF5722', linewidth=1, linestyle=':', alpha=0.5)
-    ax.scatter([current_swing], [0], [0], color='#2196F3', s=80, zorder=5, alpha=0.8)
+            color=MAIN_COLOR, linewidth=1, linestyle=':', alpha=0.5)
+    ax.scatter([current_swing], [0], [0], color=TRACE_COLOR, s=80, zorder=5, alpha=0.8)
 
-    # 历史幻影
+    # 历史幻影（标准配色）
     n_ghosts = min(8, int(progress / (np.pi / 2)))
     for i in range(n_ghosts):
         tp = i * (np.pi / 2)
@@ -115,24 +133,25 @@ def render_frame(fig, ax, frame, n_frames, L, A, H, trail_len, axis_label):
                 gs = A * np.sin(tp)
                 gz = H - np.sqrt(max(L ** 2 - gs ** 2, 0.01))
                 ax.plot([0, gs], [gy, gy], [H, gz],
-                        color='#AAAAAA', linewidth=0.6, alpha=0.15)
+                        color=GHOST_COLOR, linewidth=0.6, alpha=0.15)
                 ax.scatter([gs], [gy], [gz],
-                           color='#FF5722', s=40, alpha=0.12, zorder=4)
+                           color=GHOST_COLOR, s=40, alpha=0.12, zorder=4)
                 ax.plot([gs, gs], [gy, gy], [gz, 0],
-                        color='#AAAAAA', linewidth=0.4, linestyle=':', alpha=0.1)
+                        color=GHOST_COLOR, linewidth=0.4, linestyle=':', alpha=0.1)
 
     # 重力箭头
-    ax.quiver(-1.2, 0, H, 0, 0, -0.6, color='#999999', arrow_length_ratio=0.3, linewidth=1.5)
-    ax.text(-1.2, 0, H - 0.8, 'g', fontsize=12, color='#999999', ha='center', fontweight='bold')
+    ax.quiver(-1.2, 0, H, 0, 0, -0.6, color='#BBBBBB', arrow_length_ratio=0.3, linewidth=1.5)
+    ax.text(-1.2, 0, H - 0.8, 'g', fontsize=12, color='#BBBBBB', ha='center', fontweight='bold')
 
-    ax.view_init(elev=25, azim=-55)
+    # ★ 标准视角（全局统一）
+    ax.view_init(elev=DEFAULTS['view_elev'], azim=DEFAULTS['view_azim'])
     ax.set_xlim(-1.5, 1.5)
     ax.set_ylim(-trail_len, 1.0)
     ax.set_zlim(0, H + 0.3)
 
-    ax.set_xlabel('摆动 ←→', fontsize=10, color='#FF5722', fontweight='bold', labelpad=5)
-    ax.set_ylabel(f'← {axis_label}（纸带方向）', fontsize=10, color='#4CAF50', fontweight='bold', labelpad=5)
-    ax.set_zlabel('↑ 高度', fontsize=10, color='#666666', fontweight='bold', labelpad=5)
+    ax.set_xlabel('摆动 ←→', fontsize=10, color=MAIN_COLOR, fontweight='bold', labelpad=5)
+    ax.set_ylabel(f'← {axis_label}（纸带方向）', fontsize=10, color=AXIS_GREEN, fontweight='bold', labelpad=5)
+    ax.set_zlabel('↑ 高度', fontsize=10, color='#888888', fontweight='bold', labelpad=5)
     ax.set_title(f'单摆摆动 → 纸带记录的{axis_label}轨迹 = 正弦曲线',
                  fontsize=14, fontweight='bold', pad=12)
 
