@@ -35,6 +35,21 @@ python scripts/oscillator.py [--axis-label 位置|时间] [--frames 120] [--fps 
 - 统一输出 **GIF 动图**（知乎可直接上传）
 - 文件保存在 `output/` 目录下
 
+### ⚠️ 关键：GIF格式要点（飞书/微信播放）
+
+保存GIF时必须设置 `disposal=2`，否则会出现：
+- 重影、拖尾
+- 动画只显示第一帧
+- 微信/飞书无法播放
+
+```python
+# 正确写法
+gif.save(out_path, save_all=True, append_images=frames,
+         duration=42, loop=0, disposal=2)
+```
+
+原因：`disposal=2` 表示每帧画之前先清空背景，确保每帧独立。
+
 ### 新建动图脚本规范
 
 1. 放在 `scripts/` 目录下
