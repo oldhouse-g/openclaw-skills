@@ -138,6 +138,75 @@ def tencent_hk_names(codes):
     return names
 
 
+# ─── 资金流向（东方财富） ─────────────────────────────────
+
+def eastmoney_moneyflow(secid, days=5):
+    """
+    东方财富资金流向日K。
+    返回 [{date, main_net, small_net, mid_net, big_net, superbig_net}, ...]
+    main_net = 主力净流入（大单+超大单），单位：元
+    """
+    url = (
+        f"http://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?"
+        f"secid={secid}&fields1=f1,f2,f3,f4,f5,f6"
+        f"&fields2=f51,f52,f53,f54,f55,f56&lmt={days}"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read().decode("utf-8"))
+        klines = data.get("data", {}).get("klines", [])
+        result = []
+        for line in klines:
+            # 日期,主力净流入,小单净流入,中单净流入,大单净流入,超大单净流入
+            parts = line.split(",")
+            if len(parts) < 6:
+                continue
+            result.append({
+                "date": parts[0].replace("-", ""),
+                "main_net": float(parts[1]),      # 主力净流入
+                "small_net": float(parts[2]),      # 小单净流入
+                "mid_net": float(parts[3]),        # 中单净流入
+                "big_net": float(parts[4]),        # 大单净流入
+                "superbig_net": float(parts[5]),   # 超大单净流入
+            })
+        return result
+    except Exception as e:
+        print(f"⚠️ 资金流向获取{secid}失败: {e}", file=sys.stderr)
+        return []
+
+
+def eastmoney_moneyflow_stock(secid, days=1):
+    """获取个股资金流向"""
+    return eastmoney_moneyflow(secid, days)
+
+
+def get_northbound_flow():
+    """
+    获取北向资金实时数据（沪股通+深股通当日净流入）。
+    返回 {sh_net, sz_net, total_net, date} 单位：万元
+    """
+    url = "http://push2.eastmoney.com/api/qt/kamt/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read().decode("utf-8"))
+        hk2sh = data.get("data", {}).get("hk2sh", {})
+        hk2sz = data.get("data", {}).get("hk2sz", {})
+        sh_net = hk2sh.get("dayNetAmtIn", 0)  # 万元
+        sz_net = hk2sz.get("dayNetAmtIn", 0)
+        date = hk2sh.get("date2", "")
+        return {
+            "sh_net": sh_net,
+            "sz_net": sz_net,
+            "total_net": sh_net + sz_net,
+            "date": date,
+        }
+    except Exception as e:
+        print(f"⚠️ 北向资金获取失败: {e}", file=sys.stderr)
+        return None
+
+
 # ─── 财联社新闻 ──────────────────────────────────────────
 
 def get_news_cls():
@@ -190,8 +259,30 @@ def get_news_cls():
                     break
         return news
     except Exception as e:
-        print(f"⚠️ 新闻抓取失败: {e}", file=sys.stderr)
-        return []
+        print(f"⚠️ 财联社新闻抓取失败: {e}", file=sys.stderr)
+
+    # 方法2：新浪7x24财经新闻（备用）
+    try:
+        url = "https://zhibo.sina.com.cn/api/zhibo/feed?callback=&page=1&page_size=10&zhibo_id=152"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read().decode("utf-8"))
+        feeds = data.get("result", {}).get("data", {}).get("feed", {}).get("list", [])
+        news = []
+        for f in feeds:
+            text = re.sub(r'<[^>]+>', '', f.get("rich_text", "")).strip()
+            if len(text) > 20:
+                if len(text) > 120:
+                    text = text[:117] + "..."
+                news.append(text)
+                if len(news) >= 5:
+                    break
+        if news:
+            return news
+    except Exception as e:
+        print(f"⚠️ 新浪新闻抓取失败: {e}", file=sys.stderr)
+
+    return []
 
 
 # ─── 量价分析引擎 ──────────────────────────────────────────
@@ -406,10 +497,28 @@ def build_report():
         else:
             hk_stock_data.append({"code": code, "name": default_name, "close": 0, "pct_chg": 0})
 
-    # 4. 新闻
+    # 4. 大盘资金流向（主力净流入）
+    sh_flow = eastmoney_moneyflow("1.000001", days=5)
+    sz_flow = eastmoney_moneyflow("0.399001", days=5)
+
+    # 个股资金流向（最新一日）
+    stock_flow_map = {}  # secid -> {main_net}
+    a_secid_map = {
+        "600519.SH": "1.600519", "000333.SZ": "0.000333", "000651.SZ": "0.000651",
+        "600887.SH": "1.600887", "600036.SH": "1.600036", "000001.SZ": "0.000001",
+    }
+    for ts_code, secid in a_secid_map.items():
+        rows = eastmoney_moneyflow_stock(secid, days=1)
+        if rows:
+            stock_flow_map[ts_code] = rows[-1]
+
+    # 5. 北向资金
+    northbound = get_northbound_flow()
+
+    # 6. 新闻
     news = get_news_cls()
 
-    # 5. 量价分析
+    # 7. 量价分析
     vol_summary, trend_summary = analyze_volume_price(total_amounts, sh_pcts)
 
     # ─── 组装报告 ─────────────────────────────
@@ -497,6 +606,45 @@ def build_report():
         display_name = s["name"].ljust(4, "　")
         lines.append(f"{display_name}　{s['close']:>8.2f}　{fmt_pct(s['pct_chg'])}{tag}")
 
+    # 资金流向
+    lines.append("")
+    lines.append("━━━━━━━━━━━━━━━━")
+    lines.append("💰 资金流向")
+    lines.append("━━━━━━━━━━━━━━━━")
+
+    # 大盘主力资金
+    lines.append("")
+    # 取最新日的沪深主力净流入
+    sh_main = next((r for r in sh_flow if r["date"] == latest), None)
+    sz_main = next((r for r in sz_flow if r["date"] == latest), None)
+    if sh_main and sz_main:
+        total_main = sh_main["main_net"] + sz_main["main_net"]
+        flow_emoji = "🟢 净流入" if total_main > 0 else "🔴 净流出"
+        lines.append(f"大盘主力资金：{flow_emoji} {abs(total_main)/1e8:.1f}亿")
+        lines.append(f"　沪市主力：{'净流入' if sh_main['main_net'] > 0 else '净流出'} {abs(sh_main['main_net'])/1e8:.1f}亿")
+        lines.append(f"　深市主力：{'净流入' if sz_main['main_net'] > 0 else '净流出'} {abs(sz_main['main_net'])/1e8:.1f}亿")
+
+    # 北向资金
+    if northbound and northbound.get("total_net") is not None:
+        nb = northbound
+        nb_total = nb["total_net"]
+        if nb_total != 0:
+            nb_emoji = "🟢 净流入" if nb_total > 0 else "🔴 净流出"
+            lines.append(f"北向资金：{nb_emoji} {abs(nb_total)/1e4:.1f}亿")
+        else:
+            lines.append("北向资金：暂无数据")
+
+    # 自选股资金流向
+    if stock_flow_map:
+        lines.append("")
+        lines.append("自选股主力资金：")
+        for s in a_stock_data:
+            flow = stock_flow_map.get(s["code"])
+            if flow:
+                mn = flow["main_net"]
+                tag = f"🟢+{mn/1e8:.1f}亿" if mn > 0 else f"🔴{mn/1e8:.1f}亿"
+                lines.append(f"　{s['name']}　{tag}")
+
     # 新闻
     lines.append("")
     lines.append("━━━━━━━━━━━━━━━━")
@@ -527,6 +675,18 @@ def build_report():
 
     lines.append("")
     lines.append(f"量能分析：{vol_summary}")
+
+    # 资金面小结
+    if sh_main and sz_main:
+        total_main = sh_main["main_net"] + sz_main["main_net"]
+        if total_main > 0:
+            fund_note = f"主力资金净流入{total_main/1e8:.1f}亿，多头占优。"
+        elif total_main < -5e9:
+            fund_note = f"主力资金净流出{abs(total_main)/1e8:.1f}亿，机构出货明显，注意风险。"
+        else:
+            fund_note = f"主力资金小幅净流出{abs(total_main)/1e8:.1f}亿，观望情绪浓。"
+        lines.append(f"资金面：{fund_note}")
+
     lines.append(f"趋势判断：{trend_summary}")
 
     print("\n".join(lines))
