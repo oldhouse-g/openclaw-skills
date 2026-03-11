@@ -1,0 +1,186 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.3.7",
+    "lastTouchedAt": "2026-03-09T03:37:44.355Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-03-09T03:37:44.338Z",
+    "lastRunVersion": "2026.3.7",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+  "auth": {
+    "profiles": {
+      "openrouter:default": {
+        "provider": "openrouter",
+        "mode": "api_key"
+      },
+      "minimax-cn:default": {
+        "provider": "minimax-cn",
+        "mode": "api_key"
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "custom-openrouter-ai": {
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKey": "<YOUR_API_KEY_HERE>",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "anthropic/claude-opus-4.6",
+            "name": "anthropic/claude-opus-4.6 (Custom Provider)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 256000,
+            "maxTokens": 8192
+          }
+        ]
+      },
+      "minimax-cn": {
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "api": "anthropic-messages",
+        "authHeader": true,
+        "models": [
+          {
+            "id": "MiniMax-M2.5",
+            "name": "MiniMax M2.5",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0.3,
+              "output": 1.2,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.12
+            },
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "custom-openrouter-ai/anthropic/claude-opus-4.6",
+        "fallbacks": [
+          "minimax-cn/MiniMax-M2.5"
+        ]
+      },
+      "models": {
+        "openrouter/auto": {
+          "alias": "OpenRouter"
+        },
+        "openrouter/openrouter/auto": {},
+        "custom-openrouter-ai/anthropic/claude-opus-4.6": {
+          "alias": "claude-opus-4.6"
+        },
+        "minimax-cn/MiniMax-M2.5": {
+          "alias": "Minimax"
+        }
+      },
+      "workspace": "/Users/xie/.openclaw/workspace"
+    }
+  },
+  "tools": {
+    "profile": "full"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "boot-md": {
+          "enabled": true
+        },
+        "bootstrap-extra-files": {
+          "enabled": true
+        },
+        "command-logger": {
+          "enabled": true
+        },
+        "session-memory": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "channels": {
+    "feishu": {
+      "enabled": true,
+      "appId": "cli_a92aae30b6b9dcee",
+      "appSecret": "<YOUR_APP_SECRET_HERE>",
+      "connectionMode": "websocket",
+      "domain": "feishu",
+      "dmPolicy": "pairing",
+      "requireMention": true
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "<YOUR_GATEWAY_TOKEN_HERE>"
+    },
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    },
+    "nodes": {
+      "denyCommands": [
+        "camera.snap",
+        "camera.clip",
+        "screen.record",
+        "contacts.add",
+        "calendar.add",
+        "reminders.add",
+        "sms.send"
+      ]
+    }
+  },
+  "plugins": {
+    "entries": {
+      "feishu": {
+        "enabled": true
+      }
+    },
+    "installs": {
+      "feishu": {
+        "source": "npm",
+        "spec": "@openclaw/feishu",
+        "installPath": "/Users/xie/.openclaw/extensions/feishu",
+        "version": "2026.3.7",
+        "resolvedName": "@openclaw/feishu",
+        "resolvedVersion": "2026.3.7",
+        "resolvedSpec": "@openclaw/feishu@2026.3.7",
+        "integrity": "sha512-CHPcL+WHYKYR2HJKRYsRtlXx/wbQRy5axltjjH9qXkR8ghxygDmOHZREjxyFEbjFJ3wnIuvgjLE7JYTg3nPpDA==",
+        "shasum": "c4b31dbe2ff0bc7034334873482ad18ac60a0767",
+        "resolvedAt": "2026-03-09T03:17:54.693Z",
+        "installedAt": "2026-03-09T03:17:57.168Z"
+      }
+    }
+  }
+}
